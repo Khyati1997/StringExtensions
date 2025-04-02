@@ -2,24 +2,28 @@ trigger:
 - master
 
 pool:
-  name: Default  # This tells Azure to use your self-hosted agent in the 'Default' pool
+  name: Default  # This uses your self-hosted agent
 
 variables:
   buildConfiguration: 'Release'
 
 steps:
+# Install .NET 8 SDK (if not already available)
 - task: UseDotNet@2
+  displayName: 'Install .NET SDK'
   inputs:
     packageType: 'sdk'
     version: '8.x'
     installationPath: $(Agent.ToolsDirectory)/dotnet
 
+# Restore NuGet packages
 - task: DotNetCoreCLI@2
   displayName: 'Restore NuGet packages'
   inputs:
     command: 'restore'
     projects: '**/*.csproj'
 
+# Build the project
 - task: DotNetCoreCLI@2
   displayName: 'Build project'
   inputs:
@@ -27,16 +31,18 @@ steps:
     projects: '**/*.csproj'
     arguments: '--configuration $(buildConfiguration)'
 
+# Pack the project into a .nupkg file
 - task: DotNetCoreCLI@2
-  displayName: 'Pack into NuGet'
+  displayName: 'Pack NuGet package'
   inputs:
     command: 'pack'
     packagesToPack: '**/*.csproj'
     versioningScheme: 'off'
 
+# Push the package to Azure Artifacts
 - task: DotNetCoreCLI@2
-  displayName: 'Push to Azure Artifacts'
+  displayName: 'Push NuGet package to Azure Artifacts'
   inputs:
     command: 'push'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
-    publishVstsFeed: '<YOUR-FEED-ID>'
+    packagesToPush: '**/*.nupkg'
+    publishVstsFeed: 'StringFeed'
